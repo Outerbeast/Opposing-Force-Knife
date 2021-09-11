@@ -1,8 +1,8 @@
-// weapon_knife Version 1.1
+// weapon_knife Version 1.2
 // Custom knife weapon from Opposing Force- created using weapon_hlcrowbar and weapon_csknife from the Counter Strike Weapons Pack by KernCore
-// Usage: Primary attack- Normal operation similar to crowbar
-// 		  Secondary attack- Stab, does 3.5x the damage as primary but much slower. It can be delayed to time stabs
-
+// Usage: Primary attack - Normal operation similar to crowbar
+// 		  Secondary attack - Stab, does 3.5x the damage as primary but much slower. It can be delayed to time stabs
+//		  Tertiary attack - Throws knife
 enum knife_e
 {
 	KNIFE_IDLE = 0,
@@ -20,11 +20,44 @@ enum knife_e
 	KNIFE_STAB
 };
 
-class weapon_hlknife : ScriptBasePlayerWeaponEntity
+const array<string> STR_MDLS =
+{
+	"models/opfor/v_knife.mdl",
+	"models/opfor/w_knife.mdl",
+	"models/opfor/p_knife.mdl",
+	"sprites/opfor/weapon_knife.spr"
+};
+
+const array<string> STR_SNDS =
+{
+	"weapons/knife1.wav",
+	"weapons/knife2.wav",
+	"weapons/knife3.wav",
+	"weapons/knife3.wav",
+	"weapons/knife_hit_wall1.wav",
+	"weapons/knife_hit_wall2.wav",
+	"weapons/knife_hit_flesh1.wav",
+	"weapons/knife_hit_flesh2.wav",
+	"weapons/cbar_miss1.wav",
+	"weapons/cbe/cbe_idle1.wav",
+	"weapons/cbe/cbe_hit1.wav",
+	"weapons/cbe/cbe_hit2.wav",
+	"weapons/cbe/cbe_hitbod1.wav",
+	"weapons/cbe/cbe_hitbod2.wav",
+	"weapons/cbe/cbe_hitbod3.wav",
+	"weapons/cbe/cbe_miss1.wav",
+	"weapons/cbe/cbe_miss2.wav",
+	"weapons/cbe/cbe_off.wav",
+	"weapons/cbe/cbe_on.wav"
+};
+
+class weapon_knife : ScriptBasePlayerWeaponEntity
 {
 	private float m_flBigSwingStart;
 	private int m_iSwingMode = 0;
 	private bool isPullingBack;
+	int m_iSwing;
+	TraceResult m_trHit;
 
 	private CBasePlayer@ m_pPlayer
 	{
@@ -32,13 +65,10 @@ class weapon_hlknife : ScriptBasePlayerWeaponEntity
 		set       	{ self.m_hPlayer = EHandle( @value ); }
 	}
 
-	int m_iSwing;
-	TraceResult m_trHit;
-
 	void Spawn()
 	{
 		self.Precache();
-		g_EntityFuncs.SetModel( self, self.GetW_Model( "models/opfor/w_knife.mdl") );
+		g_EntityFuncs.SetModel( self, self.GetW_Model( "models/opfor/w_knife.mdl" ) );
 		self.m_iClip			= -1;
 		self.m_flCustomDmg		= self.pev.dmg;
 
@@ -49,33 +79,14 @@ class weapon_hlknife : ScriptBasePlayerWeaponEntity
 	{
 		self.PrecacheCustomModels();
 
-		g_Game.PrecacheModel( "models/opfor/v_knife.mdl" );
-		g_Game.PrecacheModel( "models/opfor/w_knife.mdl" );
-		g_Game.PrecacheModel( "models/opfor/p_knife.mdl" );
-		g_Game.PrecacheModel( "sprites/hl_weapons/weapon_knife.spr" );
+		for( uint i = 0; i < STR_MDLS.length(); i++ )
+			g_Game.PrecacheModel( STR_MDLS[i] );
 		
-		g_Game.PrecacheGeneric( "sprites/hl_weapons/weapon_knife.spr" );
-		g_Game.PrecacheGeneric( "sprites/hl_weapons/weapon_knife.txt" );
+		g_Game.PrecacheGeneric( "sprites/opfor/weapon_knife.spr" );
+		g_Game.PrecacheGeneric( "sprites/opfor/weapon_knife.txt" );
 		
-		g_SoundSystem.PrecacheSound( "weapons/knife_hit_wall1.wav" );
-		g_SoundSystem.PrecacheSound( "weapons/knife_hit_wall2.wav" );
-		g_SoundSystem.PrecacheSound( "weapons/knife_hit_flesh1.wav" );
-		g_SoundSystem.PrecacheSound( "weapons/knife_hit_flesh2.wav" );
-		g_SoundSystem.PrecacheSound( "weapons/knife1.wav" );
-		g_SoundSystem.PrecacheSound( "weapons/knife2.wav" );
-		g_SoundSystem.PrecacheSound( "weapons/knife3.wav" );
-		g_SoundSystem.PrecacheSound( "weapons/cbar_miss1.wav" );
-
-		g_SoundSystem.PrecacheSound( "weapons/cbe/cbe_idle1.wav" );
-		g_SoundSystem.PrecacheSound( "weapons/cbe/cbe_hit1.wav" );
-		g_SoundSystem.PrecacheSound( "weapons/cbe/cbe_hit2.wav" );
-		g_SoundSystem.PrecacheSound( "weapons/cbe/cbe_hitbod1.wav" );
-		g_SoundSystem.PrecacheSound( "weapons/cbe/cbe_hitbod2.wav" );
-		g_SoundSystem.PrecacheSound( "weapons/cbe/cbe_hitbod3.wav" );
-		g_SoundSystem.PrecacheSound( "weapons/cbe/cbe_miss1.wav" );
-		g_SoundSystem.PrecacheSound( "weapons/cbe/cbe_miss2.wav" );
-		g_SoundSystem.PrecacheSound( "weapons/cbe/cbe_off.wav" );
-		g_SoundSystem.PrecacheSound( "weapons/cbe/cbe_on.wav" );
+		for( uint i = 0; i < STR_SNDS.length(); i++ )
+			g_SoundSystem.PrecacheSound( STR_SNDS[i] );
 	}
 
 	bool GetItemInfo( ItemInfo& out info )
@@ -98,6 +109,8 @@ class weapon_hlknife : ScriptBasePlayerWeaponEntity
 	{
 		if( !BaseClass.AddToPlayer( pPlayer ) )
 			return false;
+
+		SetThink( null );
 
 		NetworkMessage weapon( MSG_ONE, NetworkMessages::WeapPickup, pPlayer.edict() );
 			weapon.WriteLong( g_ItemRegistry.GetIdForName( self.pev.classname ) );
@@ -479,16 +492,174 @@ class weapon_hlknife : ScriptBasePlayerWeaponEntity
 		g_WeaponFuncs.DecalGunshot( g_Utility.GetGlobalTrace(), BULLET_PLAYER_CROWBAR );
 		return fDidHit;
 	}
+
+	void TertiaryAttack()
+	{
+		m_pPlayer.SetAnimation( PLAYER_ATTACK1 );
+		m_pPlayer.pev.punchangle.x = -2.0f;
+
+		Math.MakeVectors( m_pPlayer.pev.v_angle );
+
+		CBaseEntity@ pTKnife = g_EntityFuncs.Create( "knife_throw", m_pPlayer.pev.origin + g_Engine.v_forward * 16 + g_Engine.v_up * 24, m_pPlayer.pev.v_angle, false, m_pPlayer.edict() );
+		if( pTKnife !is null )
+		{
+			pTKnife.pev.velocity = g_Engine.v_forward * 1024;
+			pTKnife.pev.angles = Math.VecToAngles( pTKnife.pev.velocity );
+			pTKnife.pev.avelocity.z = 10;
+
+			knife_throw@ pKnife = cast<knife_throw@>(CastToScriptClass(pTKnife));
+			pKnife.SetThink( ThinkFunction( pKnife.Think ) );
+			pKnife.pev.nextthink = g_Engine.time + 0.1;
+
+			self.m_flNextPrimaryAttack = g_Engine.time + 1.0;
+			self.m_flNextSecondaryAttack = g_Engine.time + 1.0;
+			self.m_flNextTertiaryAttack = g_Engine.time + 1.0;
+			self.m_flTimeWeaponIdle = g_Engine.time + 1.0;
+
+			CBasePlayerItem@ pItem = m_pPlayer.HasNamedPlayerItem( "weapon_knife" );
+			if( pItem !is null )
+			{
+				m_pPlayer.RemovePlayerItem( pItem );
+				m_pPlayer.SetItemPickupTimes( 0.0 ); // a fix
+			}
+		}
+	}
+
+	void DestroyThink()
+	{
+		g_EntityFuncs.Remove( self );
+	}
+
+	void FadeOut()
+	{
+		pev.nextthink = g_Engine.time + 0.1;
+
+		if( pev.rendermode == kRenderNormal )
+		{
+			pev.renderamt = 255;
+			pev.rendermode = kRenderTransTexture;
+		}
+
+		if( pev.renderamt > 7 )
+		{
+			pev.renderamt -= 7;
+		}
+		else
+		{
+			pev.renderamt = 0;
+			pev.nextthink = g_Engine.time + 0.1f;
+			SetThink( ThinkFunction( this.DestroyThink ) );
+			return;
+		}
+	}
 }
 
-string GetKnifeName()
+class knife_throw : ScriptBaseEntity
 {
-	return "weapon_knife";
+	private string MODEL = STR_MDLS[2];
+
+	private array<string> pHitSounds =
+	{
+		"weapons/knife_hit_flesh1.wav",
+		"weapons/knife_hit_flesh2.wav"
+	};
+
+	private array<string> pHitMissSounds =
+	{
+		"weapons/knife_hit_wall1.wav",
+		"weapons/knife_hit_wall2.wav"
+	};
+
+	void Spawn()
+	{
+		self.pev.movetype = MOVETYPE_BOUNCE;
+		self.pev.solid = SOLID_BBOX;
+
+		g_EntityFuncs.SetModel( self, MODEL );
+
+		self.pev.animtime = g_Engine.time;
+		self.pev.framerate = 1.0f;
+		self.pev.frame = 0.0f;
+
+		g_EntityFuncs.SetOrigin( self, self.pev.origin );
+		g_EntityFuncs.SetSize( self.pev, Vector(-3.0, -3.0, -3.0), Vector(3.0, 3.0, 3.0) );
+	}
+
+	void Think( void )
+	{
+		pev.nextthink = g_Engine.time + 0.1;
+
+		if( pev.waterlevel != 0 )
+			pev.velocity = pev.velocity * 0.5;
+
+		Vector vecAngle;
+		vecAngle = Math.VecToAngles( pev.velocity ); // Angle the knife depending on the velocity
+		pev.angles.x = vecAngle.x;
+		pev.angles.y = vecAngle.y;
+		pev.angles.z += 2.0f;
+	}
+
+	void Touch( CBaseEntity@ pOther )
+	{
+		SetThink( null );
+		SetTouch( null );
+
+		if( pOther.pev.takedamage > DAMAGE_NO )
+		{
+			TraceResult tr = g_Utility.GetGlobalTrace( );
+
+			g_WeaponFuncs.ClearMultiDamage();
+			pOther.TraceAttack( pev.owner.vars, 20, g_Engine.v_forward, tr, DMG_NEVERGIB );  
+			g_WeaponFuncs.ApplyMultiDamage( self.pev, pev.owner.vars );
+
+			pev.velocity = g_vecZero;
+
+			g_SoundSystem.EmitSoundDyn( self.edict(), CHAN_BODY, pHitSounds[Math.RandomLong(0, pHitSounds.length()-1)], 1.0f, ATTN_NORM, 0, PITCH_NORM );
+		}
+		else
+		{
+			g_SoundSystem.EmitSoundDyn( self.edict(), CHAN_BODY, pHitMissSounds[Math.RandomLong(0, pHitMissSounds.length()-1)], 1.0f, ATTN_NORM, 0, PITCH_NORM );
+
+			if( pOther.pev.ClassNameIs( "worldspawn" ) )
+			{
+				// if what we hit is static architecture, can stay around for a while.
+				Vector vecDir = pev.velocity.Normalize();
+				pev.origin = pev.origin - vecDir * 1;
+				pev.solid = SOLID_NOT;
+				pev.movetype = MOVETYPE_FLY;
+				pev.velocity = g_vecZero;
+				pev.avelocity.z = 0;
+			}
+
+			if( g_EngineFuncs.PointContents(self.pev.origin) != CONTENTS_WATER )
+				g_Utility.Sparks( pev.origin );
+		}
+
+		CBaseEntity @pEntity = g_EntityFuncs.CreateEntity( "weapon_knife", null, false );
+		if( pEntity !is null )
+		{
+			g_EntityFuncs.DispatchSpawn( pEntity.edict() );
+
+			weapon_knife@ pKnife = cast<weapon_knife@>(CastToScriptClass(pEntity));
+			g_EntityFuncs.SetOrigin( pEntity, self.pev.origin );
+			pEntity.pev.spawnflags |= SF_NORESPAWN;
+
+			pEntity.pev.angles.y = pev.angles.y;
+
+			int iWeaponFade = int( g_EngineFuncs.CVarGetFloat( "mp_weaponfadedelay" ) );
+			pKnife.SetThink( ThinkFunction( pKnife.FadeOut ) );
+			pEntity.pev.nextthink = g_Engine.time + float( iWeaponFade );
+		}
+
+		g_EntityFuncs.Remove( self );
+		pev.nextthink = g_Engine.time + 0.1;
+	}
 }
 
 void RegisterKnife()
 {
-	g_CustomEntityFuncs.RegisterCustomEntity( "weapon_hlknife", GetKnifeName() );
-	g_ItemRegistry.RegisterWeapon( GetKnifeName(), "hl_weapons" );
+	g_CustomEntityFuncs.RegisterCustomEntity( "weapon_knife", "weapon_knife" );
+	g_CustomEntityFuncs.RegisterCustomEntity( "knife_throw", "knife_throw" );
+	g_ItemRegistry.RegisterWeapon( "weapon_knife", "opfor" );
 }
 // Credit to KernCore for secondary attack functions
