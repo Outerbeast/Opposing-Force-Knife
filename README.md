@@ -1,6 +1,6 @@
 Original Opposing Force Knife custom weapon script
 ==================================================
-Version 1.1
+Version 1.2
 
 This script adds the original Opposing Force knife as a standalone weapon rather than a simple reskin of the crowbar, with its own hud slot and icon.
 It also features a secondary attack based on an unused animation of the model, that does twice the damage but the attack rate is slower.
@@ -14,16 +14,16 @@ Installation instructions for mappers:
 
 1) Extract into svencoop_addon
 2) To Mappers: In your main map script add the code
--"#include "opfor/weapon_knife" at the top of the file
-- RegisterKnife(); Inside `void MapInit()`
+-`"#include "opfor/weapon_knife"` at the top of the file
+- `RegisterKnife();` Inside `MapInit()`
 It should look like this:
-#include "opfor/weapon_knife"
+```#include "opfor/weapon_knife"
 
 void MapInit()
 {
 	RegisterKnife();
 }
-
+```
 -you should already have the map script set in the cfg "map_script mymap"
 
 You should now be able to use the weapon like with any other weapon: placed in maps, equipped via cfg or give in console.
