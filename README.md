@@ -17,7 +17,9 @@ Installation instructions for mappers:
 -`"#include "opfor/weapon_knife"` at the top of the file
 - `RegisterKnife();` Inside `MapInit()`
 It should look like this:
-```#include "opfor/weapon_knife"
+
+```
+#include "opfor/weapon_knife"
 
 void MapInit()
 {
