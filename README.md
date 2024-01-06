@@ -11,7 +11,7 @@ Note: anything with "my-" is a placeholder name- you are free to change this.
 
 ## Installation instructions for mappers: ##
 
-1) [Download]( https://github.com/Outerbeast/Opposing-Force-Knife/releases/download/v1.3/weapon_knifev1.3.zip ) and extract into svencoop_addon
+1) [Download]( https://github.com/Outerbeast/Opposing-Force-Knife/releases/download/v1.3/weapon_knife_v1.3.zip ) and extract into svencoop_addon
 2) In your main map script add the code `"#include "opfor/weapon_knife"` at the top of the file, then `RegisterKnife();` Inside `void MapInit()`
 It should look like this:
 ```
