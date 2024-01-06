@@ -1,8 +1,11 @@
-// weapon_knife Version 1.2
+// weapon_knife Version 1.3
 // Custom knife weapon from Opposing Force- created using weapon_hlcrowbar and weapon_csknife from the Counter Strike Weapons Pack by KernCore
 // Usage: Primary attack - Normal operation similar to crowbar
 // 		  Secondary attack - Stab, does 3.5x the damage as primary but much slower. It can be delayed to time stabs
 //		  Tertiary attack - Throws knife
+namespace WEAPON_KNIFE
+{
+
 enum knife_e
 {
 	KNIFE_IDLE = 0,
@@ -33,7 +36,6 @@ const array<string> STR_SNDS =
 	"weapons/knife1.wav",
 	"weapons/knife2.wav",
 	"weapons/knife3.wav",
-	"weapons/knife3.wav",
 	"weapons/knife_hit_wall1.wav",
 	"weapons/knife_hit_wall2.wav",
 	"weapons/knife_hit_flesh1.wav",
@@ -49,6 +51,18 @@ const array<string> STR_SNDS =
 	"weapons/cbe/cbe_miss2.wav",
 	"weapons/cbe/cbe_off.wav",
 	"weapons/cbe/cbe_on.wav"
+};
+
+float 
+	flDmg = 17,
+	flDmg_Sub = 10,
+	flDmg_Heavy = 30,
+	flDmg_Throw = 30;
+
+array<ItemMapping@> IM_SWAP_KNIFE = 
+{ 
+	ItemMapping( "weapon_crowbar", "weapon_knife" ),
+	ItemMapping( "weapon_hlcrowbar", "weapon_knife" )
 };
 
 class weapon_knife : ScriptBasePlayerWeaponEntity
@@ -67,6 +81,18 @@ class weapon_knife : ScriptBasePlayerWeaponEntity
 
 	void Spawn()
 	{
+		if( self.pev.dmg <= 0 )
+			self.pev.dmg = flDmg;
+
+		if( self.pev.fuser1 <= 0 )
+			self.pev.fuser1 = flDmg_Sub;
+
+		if( self.pev.fuser2 <= 0 )
+			self.pev.fuser2 = flDmg_Heavy;
+
+		if( self.pev.fuser3 <= 0 )
+			self.pev.fuser3 = flDmg_Throw;
+
 		self.Precache();
 		g_EntityFuncs.SetModel( self, self.GetW_Model( "models/opfor/w_knife.mdl" ) );
 		self.m_iClip			= -1;
@@ -77,8 +103,6 @@ class weapon_knife : ScriptBasePlayerWeaponEntity
 
 	void Precache()
 	{
-		self.PrecacheCustomModels();
-
 		for( uint i = 0; i < STR_MDLS.length(); i++ )
 			g_Game.PrecacheModel( STR_MDLS[i] );
 		
@@ -87,6 +111,8 @@ class weapon_knife : ScriptBasePlayerWeaponEntity
 		
 		for( uint i = 0; i < STR_SNDS.length(); i++ )
 			g_SoundSystem.PrecacheSound( STR_SNDS[i] );
+
+		self.PrecacheCustomModels();
 	}
 
 	bool GetItemInfo( ItemInfo& out info )
@@ -113,7 +139,7 @@ class weapon_knife : ScriptBasePlayerWeaponEntity
 		SetThink( null );
 
 		NetworkMessage weapon( MSG_ONE, NetworkMessages::WeapPickup, pPlayer.edict() );
-			weapon.WriteLong( g_ItemRegistry.GetIdForName( self.pev.classname ) );
+			weapon.WriteLong( self.m_iId );
 		weapon.End();
 
 		return true;
@@ -220,12 +246,12 @@ class weapon_knife : ScriptBasePlayerWeaponEntity
 				// miss
 				switch( ( m_iSwing++ ) % 3 )
 				{
-				case 0:
-					self.SendWeaponAnim( KNIFE_ATTACK1MISS ); break;
-				case 1:
-					self.SendWeaponAnim( KNIFE_ATTACK2 ); break;
-				case 2:
-					self.SendWeaponAnim( KNIFE_ATTACK3 ); break;
+					case 0:
+						self.SendWeaponAnim( KNIFE_ATTACK1MISS ); break;
+					case 1:
+						self.SendWeaponAnim( KNIFE_ATTACK2 ); break;
+					case 2:
+						self.SendWeaponAnim( KNIFE_ATTACK3 ); break;
 				}
 				self.m_flNextPrimaryAttack = g_Engine.time + 0.5;
 				// play wiff or swish sound
@@ -244,12 +270,12 @@ class weapon_knife : ScriptBasePlayerWeaponEntity
 
 			switch( ( ( m_iSwing++ ) % 2 ) + 1 )
 			{
-			case 0:
-				self.SendWeaponAnim( KNIFE_ATTACK1 ); break;
-			case 1:
-				self.SendWeaponAnim( KNIFE_ATTACK2HIT ); break;
-			case 2:
-				self.SendWeaponAnim( KNIFE_ATTACK3HIT ); break;
+				case 0:
+					self.SendWeaponAnim( KNIFE_ATTACK1 ); break;
+				case 1:
+					self.SendWeaponAnim( KNIFE_ATTACK2HIT ); break;
+				case 2:
+					self.SendWeaponAnim( KNIFE_ATTACK3HIT ); break;
 			}
 
 			// player "shoot" animation
@@ -270,7 +296,7 @@ class weapon_knife : ScriptBasePlayerWeaponEntity
 			else
 			{
 				// subsequent swings do 50% (Changed -Sniper) (Half)
-				pEntity.TraceAttack( m_pPlayer.pev, flDamage * 0.5, g_Engine.v_forward, tr, DMG_CLUB );  
+				pEntity.TraceAttack( m_pPlayer.pev, self.pev.fuser1, g_Engine.v_forward, tr, DMG_CLUB );  
 			}	
 			g_WeaponFuncs.ApplyMultiDamage( m_pPlayer.pev, m_pPlayer.pev );
 
@@ -295,11 +321,11 @@ class weapon_knife : ScriptBasePlayerWeaponEntity
 					// play thwack or smack sound
 					switch( Math.RandomLong( 0, 2 ) )
 					{
-					case 0:
-						g_SoundSystem.EmitSound( m_pPlayer.edict(), CHAN_WEAPON, "weapons/knife_hit_flesh1.wav", 1, ATTN_NORM ); break;
-					case 1:
-						g_SoundSystem.EmitSound( m_pPlayer.edict(), CHAN_WEAPON, "weapons/knife_hit_flesh2.wav", 1, ATTN_NORM ); break;
-					case 2:
+						case 0:
+							g_SoundSystem.EmitSound( m_pPlayer.edict(), CHAN_WEAPON, "weapons/knife_hit_flesh1.wav", 1, ATTN_NORM ); break;
+						case 1:
+							g_SoundSystem.EmitSound( m_pPlayer.edict(), CHAN_WEAPON, "weapons/knife_hit_flesh2.wav", 1, ATTN_NORM ); break;
+						case 2:
 						g_SoundSystem.EmitSound( m_pPlayer.edict(), CHAN_WEAPON, "weapons/knife_hit_flesh1.wav", 1, ATTN_NORM ); break;
 					}
 					m_pPlayer.m_iWeaponVolume = 128; 
@@ -329,12 +355,12 @@ class weapon_knife : ScriptBasePlayerWeaponEntity
 				// also play knife strike
 				switch( Math.RandomLong( 0, 1 ) )
 				{
-				case 0:
-					g_SoundSystem.EmitSoundDyn( m_pPlayer.edict(), CHAN_WEAPON, "weapons/knife_hit_wall1.wav", fvolbar, ATTN_NORM, 0, 98 + Math.RandomLong( 0, 3 ) ); 
-					break;
-				case 1:
-					g_SoundSystem.EmitSoundDyn( m_pPlayer.edict(), CHAN_WEAPON, "weapons/knife_hit_wall2.wav", fvolbar, ATTN_NORM, 0, 98 + Math.RandomLong( 0, 3 ) ); 
-					break;
+					case 0:
+						g_SoundSystem.EmitSoundDyn( m_pPlayer.edict(), CHAN_WEAPON, "weapons/knife_hit_wall1.wav", fvolbar, ATTN_NORM, 0, 98 + Math.RandomLong( 0, 3 ) ); 
+						break;
+					case 1:
+						g_SoundSystem.EmitSoundDyn( m_pPlayer.edict(), CHAN_WEAPON, "weapons/knife_hit_wall2.wav", fvolbar, ATTN_NORM, 0, 98 + Math.RandomLong( 0, 3 ) ); 
+						break;
 				}
 			}
 
@@ -426,11 +452,11 @@ class weapon_knife : ScriptBasePlayerWeaponEntity
 				float flDamage = 35;
 				if( self.m_flNextSecondaryAttack + 1 < g_Engine.time )
 				{
-					hEntity.GetEntity().TraceAttack( m_pPlayer.pev, flDamage, g_Engine.v_forward, tr, DMG_CLUB | DMG_NEVERGIB );
+					hEntity.GetEntity().TraceAttack( m_pPlayer.pev, self.pev.fuser2, g_Engine.v_forward, tr, DMG_CLUB | DMG_NEVERGIB );
 				}
 				else
 				{
-					hEntity.GetEntity().TraceAttack( m_pPlayer.pev, flDamage / 2, g_Engine.v_forward, tr, DMG_CLUB | DMG_NEVERGIB );
+					hEntity.GetEntity().TraceAttack( m_pPlayer.pev, self.pev.fuser2 / 2, g_Engine.v_forward, tr, DMG_CLUB | DMG_NEVERGIB );
 				}
 				g_WeaponFuncs.ApplyMultiDamage( m_pPlayer.pev, m_pPlayer.pev );
 			}
@@ -504,6 +530,7 @@ class weapon_knife : ScriptBasePlayerWeaponEntity
 		if( pTKnife !is null )
 		{
 			pTKnife.pev.velocity = g_Engine.v_forward * 1024;
+			pTKnife.pev.fuser3 = self.pev.fuser3; // damage
 			pTKnife.pev.angles = Math.VecToAngles( pTKnife.pev.velocity );
 			pTKnife.pev.avelocity.z = 10;
 
@@ -520,7 +547,8 @@ class weapon_knife : ScriptBasePlayerWeaponEntity
 			if( pItem !is null )
 			{
 				m_pPlayer.RemovePlayerItem( pItem );
-				m_pPlayer.SetItemPickupTimes( 0.0 ); // a fix
+				m_pPlayer.SetItemPickupTimes( 0.0 );
+				g_EntityFuncs.Remove( self );
 			}
 		}
 	}
@@ -609,7 +637,7 @@ class knife_throw : ScriptBaseEntity
 			TraceResult tr = g_Utility.GetGlobalTrace( );
 
 			g_WeaponFuncs.ClearMultiDamage();
-			pOther.TraceAttack( pev.owner.vars, 20, g_Engine.v_forward, tr, DMG_NEVERGIB );  
+			pOther.TraceAttack( pev.owner.vars, self.pev.fuser3, g_Engine.v_forward, tr, DMG_NEVERGIB );  
 			g_WeaponFuncs.ApplyMultiDamage( self.pev, pev.owner.vars );
 
 			pev.velocity = g_vecZero;
@@ -635,9 +663,10 @@ class knife_throw : ScriptBaseEntity
 				g_Utility.Sparks( pev.origin );
 		}
 
-		CBaseEntity @pEntity = g_EntityFuncs.CreateEntity( "weapon_knife", null, false );
+		CBaseEntity@ pEntity = g_EntityFuncs.CreateEntity( "weapon_knife", null, false );
 		if( pEntity !is null )
 		{
+			pEntity.pev.fuser3 = self.pev.fuser3;
 			g_EntityFuncs.DispatchSpawn( pEntity.edict() );
 
 			weapon_knife@ pKnife = cast<weapon_knife@>(CastToScriptClass(pEntity));
@@ -656,10 +685,18 @@ class knife_throw : ScriptBaseEntity
 	}
 }
 
-void RegisterKnife()
+}
+
+void RegisterKnife(bool blReplaceCrowbar = false)
 {
-	g_CustomEntityFuncs.RegisterCustomEntity( "weapon_knife", "weapon_knife" );
-	g_CustomEntityFuncs.RegisterCustomEntity( "knife_throw", "knife_throw" );
+	g_CustomEntityFuncs.RegisterCustomEntity( "WEAPON_KNIFE::weapon_knife", "weapon_knife" );
+	g_CustomEntityFuncs.RegisterCustomEntity( "WEAPON_KNIFE::knife_throw", "knife_throw" );
 	g_ItemRegistry.RegisterWeapon( "weapon_knife", "opfor" );
+
+	if( blReplaceCrowbar )
+	{
+		g_ClassicMode.SetItemMappings( @WEAPON_KNIFE::IM_SWAP_KNIFE );
+		g_ClassicMode.ForceItemRemap( true );
+	}
 }
 // Credit to KernCore for secondary attack functions
