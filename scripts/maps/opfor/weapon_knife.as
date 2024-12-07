@@ -23,35 +23,35 @@ enum knife_e
 	KNIFE_STAB
 };
 
-const array<string> STR_MDLS =
-{
-	"models/opfor/v_knife.mdl",
-	"models/opfor/w_knife.mdl",
-	"models/opfor/p_knife.mdl",
-	"sprites/opfor/weapon_knife.spr"
-};
-
-const array<string> STR_SNDS =
-{
-	"weapons/knife1.wav",
-	"weapons/knife2.wav",
-	"weapons/knife3.wav",
-	"weapons/knife_hit_wall1.wav",
-	"weapons/knife_hit_wall2.wav",
-	"weapons/knife_hit_flesh1.wav",
-	"weapons/knife_hit_flesh2.wav",
-	"weapons/cbar_miss1.wav",
-	"weapons/cbe/cbe_idle1.wav",
-	"weapons/cbe/cbe_hit1.wav",
-	"weapons/cbe/cbe_hit2.wav",
-	"weapons/cbe/cbe_hitbod1.wav",
-	"weapons/cbe/cbe_hitbod2.wav",
-	"weapons/cbe/cbe_hitbod3.wav",
-	"weapons/cbe/cbe_miss1.wav",
-	"weapons/cbe/cbe_miss2.wav",
-	"weapons/cbe/cbe_off.wav",
-	"weapons/cbe/cbe_on.wav"
-};
+const array<string> 
+	STR_MDLS =
+	{
+		"models/opfor/v_knife.mdl",
+		"models/opfor/w_knife.mdl",
+		"models/opfor/p_knife.mdl",
+		"sprites/opfor/weapon_knife.spr"
+	},
+	STR_SNDS =
+	{
+		"weapons/knife1.wav",
+		"weapons/knife2.wav",
+		"weapons/knife3.wav",
+		"weapons/knife_hit_wall1.wav",
+		"weapons/knife_hit_wall2.wav",
+		"weapons/knife_hit_flesh1.wav",
+		"weapons/knife_hit_flesh2.wav",
+		"weapons/cbar_miss1.wav",
+		"weapons/cbe/cbe_idle1.wav",
+		"weapons/cbe/cbe_hit1.wav",
+		"weapons/cbe/cbe_hit2.wav",
+		"weapons/cbe/cbe_hitbod1.wav",
+		"weapons/cbe/cbe_hitbod2.wav",
+		"weapons/cbe/cbe_hitbod3.wav",
+		"weapons/cbe/cbe_miss1.wav",
+		"weapons/cbe/cbe_miss2.wav",
+		"weapons/cbe/cbe_off.wav",
+		"weapons/cbe/cbe_on.wav"
+	};
 
 float 
 	flDmg = 17,
@@ -124,7 +124,7 @@ class weapon_knife : ScriptBasePlayerWeaponEntity
 		info.iMaxClip 	= WEAPON_NOCLIP;
 		info.iSlot  	= 0;
 		info.iPosition 	= 5;
-		info.iId     	= g_ItemRegistry.GetIdForName( self.pev.classname );
+		info.iId     	= g_ItemRegistry.GetIdForName( self.GetClassname() );
 		info.iFlags 	= 0;
 		info.iWeight 	= 0;
 
@@ -135,6 +135,8 @@ class weapon_knife : ScriptBasePlayerWeaponEntity
 	{
 		if( !BaseClass.AddToPlayer( pPlayer ) )
 			return false;
+
+		@m_pPlayer = pPlayer;
 
 		SetThink( null );
 
@@ -152,7 +154,8 @@ class weapon_knife : ScriptBasePlayerWeaponEntity
 
 	bool Deploy()
 	{
-		return self.DefaultDeploy( self.GetV_Model( "models/opfor/v_knife.mdl" ), self.GetP_Model( "models/opfor/p_knife.mdl" ), KNIFE_DRAW, "crowbar" );
+		const bool blDeployed = self.DefaultDeploy( self.GetV_Model( "models/opfor/v_knife.mdl" ), self.GetP_Model( "models/opfor/p_knife.mdl" ), KNIFE_DRAW, "crowbar" );
+		return blDeployed;
 	}
 
 	void Holster( int skipLocal = 0 )
